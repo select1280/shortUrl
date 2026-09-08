@@ -20,6 +20,8 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
+      # Redis 沒回應時快速放棄，退回查 DB，不要把請求卡在這裡
+      timeout: ${REDIS_TIMEOUT:500ms}
 
 logging:
   level:

@@ -9,9 +9,9 @@
 - [x] 專案骨架與資料庫 schema
 - [x] 短網址產生邏輯（Base62 編碼）
 - [x] 導向與點擊統計（click_count 累加；點擊明細 click_log 尚未做）
-- [ ] Redis 快取
+- [x] Redis 快取（導向讀路徑）
 - [x] 自訂短碼與有效期限
-- [ ] 單元測試（Base62 已覆蓋，service / controller 待補）
+- [ ] 單元測試（Base62 / cache / service 已覆蓋，controller 待補）
 - [ ] 前端儀表板（Angular）
 
 ## 技術棧
@@ -64,6 +64,27 @@ curl -X POST http://localhost:8080/api/urls \
 可選欄位：`customAlias`（4~16 碼英數字）、`expireAt`（ISO-8601，例如 `2026-12-31T23:59:59`）。
 
 錯誤回應：短碼不存在 404、已過期 410、自訂短碼重複 409、參數驗證失敗 400。
+
+## Redis 快取策略
+
+導向（`GET /{shortCode}`）是讀多寫少的熱路徑，因此用 **cache-aside** 擋在 DB 前面：
+
+```
+查 Redis ──命中──> 直接導向
+   │
+  未命中
+   │
+   └─> 查 DB ──有資料──> 回填 Redis ──> 導向
+              └─查無──> 寫入「不存在」標記 ──> 404
+```
+
+- **Key**：`shorturl:code:{shortCode}`，value 直接存原始網址
+- **防快取穿透**：查無的短碼也會被快取（預設 60 秒）。否則有人拿亂數短碼狂打，每一發都會穿到 DB
+- **TTL 對齊有效期限**：快取時間取 `min(設定 TTL, 距離 expireAt 的秒數)`，避免短碼過期後快取仍把人導去失效連結
+- **降級**：所有 Redis 例外都在快取層被吃掉並記 WARN，退回查 DB。Redis 掛掉服務只是變慢，不會壞掉
+- **點擊數不進快取**：`click_count` 仍以 SQL 累加，確保統計正確。之後可再改成 Redis 累加、批次回寫
+
+相關設定（`app.short-url.cache.*`）：`enabled`、`ttl`（預設 `1h`）、`null-ttl`（預設 `60s`）。
 
 ## 設定檔
 

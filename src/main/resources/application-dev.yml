@@ -17,6 +17,8 @@ spring:
     redis:
       host: localhost
       port: 6379
+      # Redis 沒回應時快速放棄，退回查 DB，不要把請求卡在這裡
+      timeout: 500ms
 
 logging:
   level:

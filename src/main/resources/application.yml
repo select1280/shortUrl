@@ -25,3 +25,9 @@ app:
   short-url:
     base-url: ${SHORT_URL_BASE_URL:http://localhost:8080/}
     code-length: ${SHORT_URL_CODE_LENGTH:6}
+    cache:
+      enabled: ${CACHE_ENABLED:true}
+      # 短碼對應網址的快取時間
+      ttl: ${CACHE_TTL:1h}
+      # 「查無此短碼」的快取時間，刻意很短，用來擋快取穿透
+      null-ttl: ${CACHE_NULL_TTL:60s}
