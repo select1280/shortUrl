@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: shorturl-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pw
+      MYSQL_DATABASE: short_url
+      MYSQL_USER: shorturl
+      MYSQL_PASSWORD: shorturl_pw
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: shorturl-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+volumes:
+  mysql_data:

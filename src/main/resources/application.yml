@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: short-url-service
+
+  # 沒指定 --spring.profiles.active 時預設跑 dev，讓 clone 下來就能直接啟動
+  profiles:
+    default: dev
+
+  jpa:
+    # 關掉 OSIV：讓 lazy loading 的邊界留在 service 層，避免 Controller 才觸發查詢
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  sql:
+    init:
+      mode: never
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# 短網址服務設定（前綴用於組回傳的短網址，Base62 編碼長度不足時左補 0）
+app:
+  short-url:
+    base-url: ${SHORT_URL_BASE_URL:http://localhost:8080/}
+    code-length: ${SHORT_URL_CODE_LENGTH:6}

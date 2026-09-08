@@ -1,0 +1,11 @@
+# 版控內一律存 LF，避免 Windows / Linux 混用時整檔 diff
+* text=auto eol=lf
+
+# Windows 批次檔必須是 CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# mvnw 是 shell script，在 Linux / macOS 上必須是 LF 才跑得起來
+mvnw text eol=lf
+
+*.jar binary

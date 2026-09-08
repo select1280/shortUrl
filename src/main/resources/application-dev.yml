@@ -1,0 +1,23 @@
+# 本機開發用設定，對應 docker-compose.yml 起的 MySQL / Redis。
+# 這裡的帳密只是本機容器的固定值，不是真實環境憑證。
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/short_url?useSSL=false&serverTimezone=Asia/Taipei
+    username: shorturl
+    password: shorturl_pw
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      # dev 讓 Hibernate 自動補結構，開發期改 entity 比較快
+      ddl-auto: update
+    show-sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+logging:
+  level:
+    com.pokai.shorturl: DEBUG

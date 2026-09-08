@@ -1,0 +1,11 @@
+target/
+*.class
+.idea/
+*.iml
+.vscode/
+*.log
+
+# 本機覆寫設定（放個人帳密、實驗用參數），不進版控
+application-local.yml
+application-*-local.yml
+.env
