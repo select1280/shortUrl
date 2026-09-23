@@ -1,20 +1,26 @@
 package com.pokai.shorturl.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pokai.shorturl.click.ClickEvent;
+import com.pokai.shorturl.click.ClickRecorder;
+import com.pokai.shorturl.config.ClockConfig;
 import com.pokai.shorturl.dto.ShortUrlResponse;
 import com.pokai.shorturl.exception.ShortUrlException;
 import com.pokai.shorturl.service.ShortUrlService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -29,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Service 是假的，所以不需要 MySQL 和 Redis，測試跑得快也不會因為環境而失敗。
  */
 @WebMvcTest(ShortUrlController.class)
+@Import(ClockConfig.class)
 class ShortUrlControllerTest {
 
     private static final String CODE = "000001";
@@ -42,6 +49,43 @@ class ShortUrlControllerTest {
 
     @MockBean
     private ShortUrlService service;
+
+    @MockBean
+    private ClickRecorder clickRecorder;
+
+    @Test
+    @DisplayName("導向成功時記錄點擊，帶上 IP、User-Agent、Referer")
+    void redirect_recordsClick() throws Exception {
+        when(service.resolveAndCount(CODE)).thenReturn(URL);
+
+        mockMvc.perform(get("/" + CODE)
+                        .header("User-Agent", "Mozilla/5.0")
+                        .header("Referer", "https://news.example.com")
+                        .with(request -> {
+                            request.setRemoteAddr("203.0.113.7");
+                            return request;
+                        }))
+                .andExpect(status().isFound());
+
+        ArgumentCaptor<ClickEvent> event = ArgumentCaptor.forClass(ClickEvent.class);
+        verify(clickRecorder).record(event.capture());
+        assertThat(event.getValue().shortCode()).isEqualTo(CODE);
+        assertThat(event.getValue().ip()).isEqualTo("203.0.113.7");
+        assertThat(event.getValue().userAgent()).isEqualTo("Mozilla/5.0");
+        assertThat(event.getValue().referer()).isEqualTo("https://news.example.com");
+        assertThat(event.getValue().clickedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("短碼不存在時不記錄點擊")
+    void redirect_notFound_doesNotRecordClick() throws Exception {
+        when(service.resolveAndCount(CODE)).thenThrow(ShortUrlException.notFound(CODE));
+
+        mockMvc.perform(get("/" + CODE))
+                .andExpect(status().isNotFound());
+
+        verify(clickRecorder, never()).record(any());
+    }
 
     @Test
     @DisplayName("建立短網址回 201 與短網址資訊")

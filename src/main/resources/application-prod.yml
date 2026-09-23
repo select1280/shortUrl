@@ -23,6 +23,12 @@ spring:
       # Redis 沒回應時快速放棄，退回查 DB，不要把請求卡在這裡
       timeout: ${REDIS_TIMEOUT:500ms}
 
+server:
+  # 正式環境通常在反向代理（Nginx / 雲端 LB）後面，request.getRemoteAddr() 拿到的會是代理的 IP。
+  # native 會交給 Tomcat 的 RemoteIpValve 從 X-Forwarded-For 還原真實 IP，
+  # 而且預設只信任內網代理送來的標頭，外部偽造的 X-Forwarded-For 不會被採信。
+  forward-headers-strategy: native
+
 logging:
   level:
     root: INFO
