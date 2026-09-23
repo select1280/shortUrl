@@ -19,6 +19,12 @@
 
     <properties>
         <java.version>17</java.version>
+        <!--
+          Spring Boot 3.2 內建的 Testcontainers 1.19 用舊版 Docker API，
+          Docker Engine 29 起不再支援，會被誤判成「沒有 Docker」而默默略過測試。
+          覆寫成支援新版 Docker 的版本。
+        -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -64,6 +70,23 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 用真的 MySQL 容器測查詢，避免 H2 與 MySQL 語法差異造成「測試過、上線壞」；版本由 Spring Boot 管理 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
