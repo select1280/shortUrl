@@ -31,3 +31,5 @@ app:
       ttl: ${CACHE_TTL:1h}
       # 「查無此短碼」的快取時間，刻意很短，用來擋快取穿透
       null-ttl: ${CACHE_NULL_TTL:60s}
+      # Redis 失敗後跳過 Redis 的時間，避免每個請求都卡在 timeout
+      circuit-open-duration: ${CACHE_CIRCUIT_OPEN_DURATION:30s}

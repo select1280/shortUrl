@@ -9,6 +9,7 @@ import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
@@ -35,7 +36,22 @@ class ShortUrlCacheTest {
         valueOps = mock(ValueOperations.class);
         lenient().when(redis.opsForValue()).thenReturn(valueOps);
         properties = new ShortUrlProperties();
-        cache = new ShortUrlCache(redis, properties);
+        RedisCircuitBreaker breaker = new RedisCircuitBreaker(Clock.systemUTC(), properties);
+        cache = new ShortUrlCache(redis, properties, breaker);
+    }
+
+    @Test
+    @DisplayName("Redis 失敗一次後斷路器開啟，下一個請求直接跳過 Redis")
+    void lookup_skipsRedisWhileCircuitOpen() {
+        when(valueOps.get(KEY)).thenThrow(new RedisConnectionFailureException("redis down"));
+
+        cache.lookup(CODE);
+        cache.lookup(CODE);
+        cache.put(CODE, URL, null);
+
+        // 只有第一次真的打到 Redis，之後都被斷路器擋掉
+        verify(valueOps, times(1)).get(KEY);
+        verify(valueOps, never()).set(anyString(), anyString(), any(Duration.class));
     }
 
     @Test

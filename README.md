@@ -81,10 +81,11 @@ curl -X POST http://localhost:8080/api/urls \
 - **Key**：`shorturl:code:{shortCode}`，value 直接存原始網址
 - **防快取穿透**：查無的短碼也會被快取（預設 60 秒）。否則有人拿亂數短碼狂打，每一發都會穿到 DB
 - **TTL 對齊有效期限**：快取時間取 `min(設定 TTL, 距離 expireAt 的秒數)`，避免短碼過期後快取仍把人導去失效連結
-- **降級**：所有 Redis 例外都在快取層被吃掉並記 WARN，退回查 DB。Redis 掛掉服務只是變慢，不會壞掉
+- **降級**：所有 Redis 例外都在快取層被吃掉，退回查 DB。Redis 掛掉服務只是變慢，不會壞掉
+- **斷路器**：光是吃掉例外還不夠 —— Redis 掛掉時每個請求都得各自等 timeout（實測每次約 1 秒），服務會慢到跟掛了差不多。因此失敗一次就開啟斷路器，接下來 30 秒直接跳過 Redis；時間到後放一個請求去試，成功就關閉。實測開啟後請求從 1 秒降到約 30 毫秒，log 也從每個請求一段 stack trace 變成只印一行
 - **點擊數不進快取**：`click_count` 仍以 SQL 累加，確保統計正確。之後可再改成 Redis 累加、批次回寫
 
-相關設定（`app.short-url.cache.*`）：`enabled`、`ttl`（預設 `1h`）、`null-ttl`（預設 `60s`）。
+相關設定（`app.short-url.cache.*`）：`enabled`、`ttl`（預設 `1h`）、`null-ttl`（預設 `60s`）、`circuit-open-duration`（預設 `30s`）。
 
 ## 設定檔
 

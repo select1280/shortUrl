@@ -44,5 +44,8 @@ public class ShortUrlProperties {
          * 又不會讓之後才建立的同名短碼被卡太久。
          */
         private Duration nullTtl = Duration.ofSeconds(60);
+
+        /** Redis 失敗後，斷路器維持開啟（跳過 Redis）多久 */
+        private Duration circuitOpenDuration = Duration.ofSeconds(30);
     }
 }
