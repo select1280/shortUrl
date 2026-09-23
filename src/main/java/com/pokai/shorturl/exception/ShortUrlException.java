@@ -29,4 +29,8 @@ public class ShortUrlException extends RuntimeException {
     public static ShortUrlException aliasTaken(String alias) {
         return new ShortUrlException(HttpStatus.CONFLICT, "自訂短碼已被使用: " + alias);
     }
+
+    public static ShortUrlException badRequest(String message) {
+        return new ShortUrlException(HttpStatus.BAD_REQUEST, message);
+    }
 }

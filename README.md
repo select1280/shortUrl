@@ -8,11 +8,14 @@
 
 - [x] 專案骨架與資料庫 schema
 - [x] 短網址產生邏輯（Base62 編碼）
-- [x] 導向與點擊統計（click_count 累加；點擊明細 click_log 尚未做）
-- [x] Redis 快取（導向讀路徑）
+- [x] 導向與點擊計數（click_count 累加）
+- [x] Redis 快取（導向讀路徑）+ 防穿透 + 斷路器
 - [x] 自訂短碼與有效期限
-- [ ] 單元測試（Base62 / cache / service 已覆蓋，controller 待補）
+- [x] 點擊明細 click_log（非同步寫入）+ 統計 API（每日趨勢、熱門排行）
+- [x] 測試：63 個，含以 Testcontainers 跑真實 MySQL 的查詢測試
+- [ ] Dockerfile + GitHub Actions CI
 - [ ] 前端儀表板（Angular）
+- [ ] OpenAPI 文件
 
 ## 技術棧
 
@@ -39,6 +42,8 @@
 | POST | `/api/urls` | 建立短網址 |
 | GET | `/api/urls/{shortCode}` | 查詢短碼資訊（不累加點擊數） |
 | GET | `/{shortCode}` | 302 導向原始網址，並累加點擊數 |
+| GET | `/api/urls/{shortCode}/stats/daily?from=&to=` | 單一短碼每日點擊數（沒點擊的日子補 0） |
+| GET | `/api/stats/top?from=&to=&limit=` | 期間內點擊最多的短碼 |
 
 建立短網址：
 
@@ -86,6 +91,49 @@ curl -X POST http://localhost:8080/api/urls \
 - **點擊數不進快取**：`click_count` 仍以 SQL 累加，確保統計正確。之後可再改成 Redis 累加、批次回寫
 
 相關設定（`app.short-url.cache.*`）：`enabled`、`ttl`（預設 `1h`）、`null-ttl`（預設 `60s`）、`circuit-open-duration`（預設 `30s`）。
+
+## 點擊統計
+
+每次導向成功都會寫一筆 `click_log`（時間、IP、User-Agent、Referer）：
+
+- **非同步寫入**：導向是熱路徑，INSERT 丟到專用的背景執行緒池（`click-log-*`），導向本身只負責回 302
+- **先複製再非同步**：請求的欄位在請求執行緒上先複製成 `ClickEvent`；回應送出後 Tomcat 會回收 request 物件，背景執行緒不能再讀它
+- **佇列有上限，滿了就丟**：DB 變慢時寧可少記幾筆統計，也不要拖慢所有人的導向
+- **存短碼不存 id**：導向命中快取時手上只有短碼，關聯 id 就得多查一次 DB
+- **真實 IP**：prod 設 `server.forward-headers-strategy=native`，只信任內網代理送來的 `X-Forwarded-For`，不自己解析可被偽造的標頭
+
+統計 API 的日期是 ISO 格式（`2026-09-23`），`from` / `to` 都含當天，不帶時預設最近 7 天，單次最多 90 天。
+查詢一律用半開區間 `clicked_at >= from AND clicked_at < to+1`，EXPLAIN 實測能用到 `(short_code, clicked_at)` 索引的兩個欄位。
+
+```bash
+curl http://localhost:8080/api/urls/000001/stats/daily?from=2026-09-17&to=2026-09-23
+```
+
+```json
+{
+  "shortCode": "000001",
+  "from": "2026-09-17",
+  "to": "2026-09-23",
+  "totalClicks": 6,
+  "days": [
+    { "date": "2026-09-17", "clicks": 0 },
+    { "date": "2026-09-18", "clicks": 2 },
+    "..."
+  ]
+}
+```
+
+> `click_log` 的總數可能略少於 `url_mapping.click_count`：前者是非同步寫入、佇列滿時會丟棄，後者是同步累加。
+
+## 測試
+
+```bash
+./mvnw test
+```
+
+- 單元測試用 Mockito，不需要任何外部服務
+- `ClickLogRepositoryTest` 用 Testcontainers 啟動真正的 MySQL 8 驗證查詢（日期轉換、GROUP BY 這類語法 H2 與 MySQL 行為不同）。需要 Docker；沒有 Docker 時會自動略過
+- 注意：Docker Engine 29 以上需要 Testcontainers 1.21.4+（已在 `pom.xml` 覆寫），舊版會把 Docker 誤判成不存在而默默略過測試
 
 ## 設定檔
 
