@@ -1,5 +1,7 @@
 # Short URL Service
 
+[![CI](https://github.com/select1280/shortUrl/actions/workflows/ci.yml/badge.svg)](https://github.com/select1280/shortUrl/actions/workflows/ci.yml)
+
 短網址服務 - 個人技術作品集專案，練習系統設計、快取應用與後端工程實務。
 
 > 開發中，此 README 會隨功能進度持續更新。
@@ -13,7 +15,7 @@
 - [x] 自訂短碼與有效期限
 - [x] 點擊明細 click_log（非同步寫入）+ 統計 API（每日趨勢、熱門排行）
 - [x] 測試：63 個，含以 Testcontainers 跑真實 MySQL 的查詢測試
-- [ ] Dockerfile + GitHub Actions CI
+- [x] Dockerfile + GitHub Actions CI
 - [ ] 前端儀表板（Angular）
 - [ ] OpenAPI 文件
 
@@ -165,3 +167,25 @@ docker compose up -d
 ```bash
 java -jar target/short-url-service-0.1.0.jar --spring.profiles.active=prod
 ```
+
+## 用容器跑整套
+
+```bash
+docker compose --profile full up -d --build
+```
+
+應用程式會等 MySQL 和 Redis 通過 healthcheck 才啟動，不是容器一起來就衝過去連。
+
+映像檔的幾個設計：
+
+- **多階段建置**：執行階段只帶 JRE，不含 JDK 與 Maven
+- **分層 jar**：依賴和應用程式碼拆成不同 layer，改程式碼時不用重建依賴那層
+- **非 root 執行**
+- **`TZ=Asia/Taipei`**：容器預設 UTC，不設的話台灣時間 08:00 前的點擊會被算到前一天
+- **`MaxRAMPercentage`**：讓 JVM 依容器的記憶體限制調整堆積大小，而不是看主機總記憶體
+
+## CI
+
+每次 push 和 PR 都會跑 [GitHub Actions](.github/workflows/ci.yml)：測試（含 Testcontainers 的真實 MySQL）與映像檔建置。
+
+有一個步驟會**把被略過的測試當成失敗**。因為 Testcontainers 連不上 Docker 時，會把測試標成 skipped 而不是 failed，建置仍然顯示綠燈 —— 本機就踩過一次，4 個資料庫測試整整被略過還顯示通過。
