@@ -25,6 +25,8 @@
           覆寫成支援新版 Docker 的版本。
         -->
         <testcontainers.version>1.21.4</testcontainers.version>
+        <!-- 2.3.x 對應 Spring Boot 3.2 -->
+        <springdoc.version>2.3.0</springdoc.version>
     </properties>
 
     <dependencies>
@@ -64,6 +66,13 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+
+        <!-- OpenAPI 文件 / Swagger UI；不在 Spring Boot BOM 內，要自己指定版本 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
 
         <!-- 測試 -->

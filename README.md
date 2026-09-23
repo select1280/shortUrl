@@ -16,8 +16,8 @@
 - [x] 點擊明細 click_log（非同步寫入）+ 統計 API（每日趨勢、熱門排行）
 - [x] 測試：63 個，含以 Testcontainers 跑真實 MySQL 的查詢測試
 - [x] Dockerfile + GitHub Actions CI
+- [x] OpenAPI 文件 / Swagger UI
 - [ ] 前端儀表板（Angular）
-- [ ] OpenAPI 文件
 
 ## 技術棧
 
@@ -93,6 +93,17 @@ curl -X POST http://localhost:8080/api/urls \
 - **點擊數不進快取**：`click_count` 仍以 SQL 累加，確保統計正確。之後可再改成 Redis 累加、批次回寫
 
 相關設定（`app.short-url.cache.*`）：`enabled`、`ttl`（預設 `1h`）、`null-ttl`（預設 `60s`）、`circuit-open-duration`（預設 `30s`）。
+
+## API 文件
+
+應用程式啟動後：
+
+- Swagger UI：http://localhost:8080/swagger-ui.html
+- OpenAPI JSON：http://localhost:8080/v3/api-docs
+
+文件由 Controller 上的註解自動產生，`OpenApiDocsTest` 會驗證每支 API 都出現在產出的文件裡 —— 新增 API 卻忘了寫註解時測試會失敗。
+
+**prod profile 預設關閉文件**（回 404）。API 文件等於把所有端點、參數與錯誤碼攤開給任何人看，需要時再用 `SWAGGER_ENABLED=true` 個別打開。
 
 ## 點擊統計
 

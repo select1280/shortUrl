@@ -20,6 +20,15 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    # 依 Controller 裡 @Tag 的宣告順序排列，不要用字母序
+    tags-sorter: alpha
+    operations-sorter: method
+
 # 短網址服務設定（前綴用於組回傳的短網址，Base62 編碼長度不足時左補 0）
 app:
   short-url:

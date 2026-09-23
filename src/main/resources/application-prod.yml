@@ -23,6 +23,14 @@ spring:
       # Redis 沒回應時快速放棄，退回查 DB，不要把請求卡在這裡
       timeout: ${REDIS_TIMEOUT:500ms}
 
+springdoc:
+  # 正式環境預設關掉 API 文件：它會把所有端點、參數與錯誤碼攤開給任何人看，
+  # 等於免費奉送一份攻擊指南。需要時再用環境變數個別打開。
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
 server:
   # 正式環境通常在反向代理（Nginx / 雲端 LB）後面，request.getRemoteAddr() 拿到的會是代理的 IP。
   # native 會交給 Tomcat 的 RemoteIpValve 從 X-Forwarded-For 還原真實 IP，
