@@ -15,6 +15,9 @@ jobs:
   test:
     name: Build and test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write      # 讓測試報告能建立 check run
     # ubuntu runner 內建 Docker，Testcontainers 會自己起 MySQL，所以這裡不用宣告 service 容器
     steps:
       - uses: actions/checkout@v4
@@ -33,12 +36,35 @@ jobs:
           TZ: Asia/Taipei
         run: ./mvnw -B verify
 
+      # 這一步是為了防止「綠燈但其實沒測到」：
+      # Testcontainers 連不上 Docker 時會把測試標成 skipped 而不是失敗，建置照樣成功。
+      # 本機就踩過一次，4 個資料庫測試整整被略過還顯示通過，所以這裡直接把 skipped 當失敗。
+      - name: Verify no tests were skipped
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob, sys, xml.etree.ElementTree as ET
+          total = skipped = failures = errors = 0
+          for path in glob.glob('target/surefire-reports/TEST-*.xml'):
+              suite = ET.parse(path).getroot()
+              total += int(suite.get('tests', 0))
+              skipped += int(suite.get('skipped', 0))
+              failures += int(suite.get('failures', 0))
+              errors += int(suite.get('errors', 0))
+          print(f'tests={total} skipped={skipped} failures={failures} errors={errors}')
+          if total == 0:
+              sys.exit('沒有任何測試被執行')
+          if skipped:
+              sys.exit(f'有 {skipped} 個測試被略過，CI 不接受略過的測試')
+          PY
+
       - name: Publish test report
         # 失敗時更需要看報告，所以不管前面成敗都執行
         if: always()
         uses: mikepenz/action-junit-report@v4
         with:
           report_paths: '**/target/surefire-reports/TEST-*.xml'
+          check_name: Test report
 
   docker:
     name: Build Docker image
