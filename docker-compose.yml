@@ -13,6 +13,13 @@ services:
       - "${MYSQL_PORT:-3307}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      # 讓 app 能等到「資料庫真的可以連線」才啟動，而不是「容器起來了」就衝過去連
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "shorturl", "-pshorturl_pw"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
@@ -20,6 +27,32 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 一鍵把整套跑起來：docker compose --profile full up -d --build
+  # 平常本機開發只需要 mysql 和 redis，所以 app 放在 full profile 裡，預設不會啟動
+  app:
+    build: .
+    container_name: shorturl-app
+    profiles: ["full"]
+    restart: unless-stopped
+    environment:
+      # 容器之間用服務名稱互連，走的是內網的 3306，跟主機對外映射的 3307 無關
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/short_url?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Taipei
+      SPRING_DATA_REDIS_HOST: redis
+      # 每日統計依伺服器時區切分日期，時區跟 DB 的 serverTimezone 必須一致
+      TZ: ${TZ:-Asia/Taipei}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   mysql_data:

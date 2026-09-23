@@ -1,0 +1,10 @@
+# 建置時不需要送進 Docker daemon 的東西，送越少建置越快
+target/
+.git/
+.idea/
+*.iml
+.mvn/
+mvnw
+mvnw.cmd
+README.md
+*.log
