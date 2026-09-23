@@ -157,6 +157,8 @@ th {
   color: var(--muted);
   font-weight: 500;
   font-size: 0.8rem;
+  /* 不加的話「點擊」這種短標題會被擠成直排 */
+  white-space: nowrap;
 }
 
 tbody tr {

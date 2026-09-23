@@ -46,6 +46,10 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       # 每日統計依伺服器時區切分日期，時區跟 DB 的 serverTimezone 必須一致
       TZ: ${TZ:-Asia/Taipei}
+      # 對外入口是 nginx，回傳的短網址要指向使用者實際連的位址，不是 app 容器自己的 port
+      SHORT_URL_BASE_URL: http://localhost:${WEB_PORT:-4200}/
+      # app 在 nginx 後面，靠 X-Forwarded-For 還原真實 client IP（只信任內網來源）
+      SERVER_FORWARD_HEADERS_STRATEGY: native
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:
@@ -53,6 +57,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  # 前端由 nginx 提供靜態檔，並把 /api 和短碼導向轉給 app 容器
+  web:
+    build: ./frontend
+    container_name: shorturl-web
+    profiles: ["full"]
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-4200}:80"
+    depends_on:
+      - app
 
 volumes:
   mysql_data:

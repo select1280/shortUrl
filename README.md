@@ -17,7 +17,7 @@
 - [x] 測試：63 個，含以 Testcontainers 跑真實 MySQL 的查詢測試
 - [x] Dockerfile + GitHub Actions CI
 - [x] OpenAPI 文件 / Swagger UI
-- [ ] 前端儀表板（Angular）
+- [x] 前端儀表板（Angular）
 
 ## 技術棧
 
@@ -179,11 +179,32 @@ docker compose up -d
 java -jar target/short-url-service-0.1.0.jar --spring.profiles.active=prod
 ```
 
+## 前端儀表板
+
+Angular 17（standalone components + signals），三個區塊：建立短網址、熱門排行、每日點擊折線圖。點排行的任一列就會載入該短碼的趨勢。
+
+```bash
+cd frontend
+npm install
+npm start          # http://localhost:4200
+```
+
+dev server 會把 `/api` 轉給 `localhost:8080`（`proxy.conf.json`），所以後端不用設 CORS。
+
+折線圖是**手刻 SVG**，沒有引入圖表套件 —— 內容就是 7 個點連成的折線，為此裝一套圖表函式庫並不划算。y 軸最大值取 `max(1, ...)`，否則整週都沒點擊時會除以零。
+
 ## 用容器跑整套
 
 ```bash
 docker compose --profile full up -d --build
 ```
+
+| 服務 | 位址 |
+| --- | --- |
+| 前端（nginx） | http://localhost:4200 |
+| 後端 API | http://localhost:8080 |
+
+nginx 同時負責把 `/api` 和**短碼導向**轉給後端。短碼那條用的 regex 跟後端 Controller 的路由規則一致（4~16 碼英數字），其餘路徑一律回 `index.html` 交給前端。
 
 應用程式會等 MySQL 和 Redis 通過 healthcheck 才啟動，不是容器一起來就衝過去連。
 
