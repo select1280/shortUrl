@@ -1,0 +1,15 @@
+<header>
+  <h1>Short URL</h1>
+  <p class="muted">短網址服務儀表板</p>
+</header>
+
+<main>
+  <div class="column">
+    <app-create-short-url (urlCreated)="onCreated($event)" />
+    <app-daily-chart [shortCode]="selectedCode()" />
+  </div>
+
+  <div class="column">
+    <app-top-urls [selectedCode]="selectedCode()" (shortCodeSelected)="selectedCode.set($event)" />
+  </div>
+</main>
